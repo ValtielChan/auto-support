@@ -1,4 +1,8 @@
-# Auto Support
+<p align="center">
+  <img src="docs/logo.png" width="120" alt="Auto Support">
+</p>
+
+<h1 align="center">Auto Support</h1>
 
 **Self-hosted AI support agent for your email inboxes.** Connect any existing mailbox over
 plain IMAP/SMTP, give it your product context and writing style, and let it read incoming

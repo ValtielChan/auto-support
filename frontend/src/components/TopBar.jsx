@@ -26,7 +26,7 @@ export default function TopBar({ mailboxes, currentId }) {
     <header className="topbar">
       <div className="topbar-left">
         <NavLink to="/" className="brand">
-          <span className="brand-dot" /> Auto&nbsp;<span className="hl">Support</span>
+          <img src="/logo.svg" className="brand-logo" alt="" /> Auto&nbsp;<span className="hl">Support</span>
         </NavLink>
         {hasSwitcher && (
           <select

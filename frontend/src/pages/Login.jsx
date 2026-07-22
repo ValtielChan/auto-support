@@ -29,7 +29,7 @@ export default function Login() {
     <div className="login-wrap">
       <form className="card login-card" onSubmit={submit}>
         <div className="brand">
-          <span className="brand-dot" /> Auto&nbsp;<span className="hl">Support</span>
+          <img src="/logo.svg" className="brand-logo" alt="" /> Auto&nbsp;<span className="hl">Support</span>
         </div>
         <p className="muted">
           Sign in to manage your <span className="hl-pink">support mailboxes</span>.
