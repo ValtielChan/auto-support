@@ -43,7 +43,7 @@ export default function Brand() {
     setError('')
     try {
       await api.runMailbox(id)
-      setNotice('Run started — check Runs in a moment.')
+      setNotice('Run started - check Runs in a moment.')
     } catch (e) {
       setError(e.message)
     }

@@ -116,7 +116,7 @@ export default function InboxTab({ mailboxId }) {
                       <span className={`inbox-dot ${m.seen ? 'read' : ''}`} title={m.seen ? 'Read' : 'Unread'} />
                     </td>
                     <td className="inbox-clickable" onClick={() => setOpenUid(m.uid)}>
-                      <div className="inbox-from">{m.from_address || '—'}</div>
+                      <div className="inbox-from">{m.from_address || '-'}</div>
                       <div className="muted inbox-date">{fmtDate(m.received_at)}</div>
                     </td>
                     <td className="inbox-clickable" onClick={() => setOpenUid(m.uid)}>
@@ -449,7 +449,7 @@ function Composer({ mailboxId, uid, to }) {
 
   const aiBusy = busy.startsWith('ai')
 
-  // Collapsed: no composer chrome — just entry points, so the message has room.
+  // Collapsed: no composer chrome - just entry points, so the message has room.
   if (!open) {
     return (
       <div className="reader-compose reader-compose-bar">
@@ -514,7 +514,7 @@ function Composer({ mailboxId, uid, to }) {
 
       {customOpen && (
         <Modal title="Draft with AI" onClose={() => setCustomOpen(false)}>
-          <p className="muted">Tell the AI how to write this reply — it uses the mailbox's product context, playbooks and guidelines.</p>
+          <p className="muted">Tell the AI how to write this reply - it uses the mailbox's product context, playbooks and guidelines.</p>
           <textarea
             rows={4}
             autoFocus

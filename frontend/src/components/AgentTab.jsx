@@ -54,7 +54,7 @@ export default function AgentTab({ mailboxId }) {
         <h2>Schedule & behavior</h2>
         <label className="checkbox">
           <input type="checkbox" checked={agent.enabled} onChange={set('enabled')} />{' '}
-          <strong>Agent enabled</strong> — reads and processes new emails automatically
+          <strong>Agent enabled</strong> - reads and processes new emails automatically
         </label>
         <div className="grid-3">
           <Field label="Check interval">
@@ -92,7 +92,7 @@ export default function AgentTab({ mailboxId }) {
         </div>
         <label className="checkbox">
           <input type="checkbox" checked={agent.auto_send} onChange={set('auto_send')} />{' '}
-          <strong>Auto-send replies</strong> — if unchecked, replies wait in the approval queue
+          <strong>Auto-send replies</strong> - if unchecked, replies wait in the approval queue
         </label>
         <p className="muted">Last run: {fmtDate(agent.last_run_at)}</p>
       </div>

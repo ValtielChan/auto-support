@@ -1,4 +1,4 @@
-# AGENT.md — project context for AI agents & contributors
+# AGENT.md - project context for AI agents & contributors
 
 Read this before modifying anything. It explains what the project is, how it is built,
 the conventions in place, and the traps that already bit us once.
@@ -9,7 +9,7 @@ the conventions in place, and the traps that already bit us once.
 existing mailboxes (plain IMAP/SMTP), attach an AI "support agent" to each one
 (product context + writing guidelines + behavior rules), and the agent periodically
 reads new email, classifies it (`support` / `partnership` / `marketing` / `spam` /
-`other`), and answers support requests — either automatically (`auto_send`) or through
+`other`), and answers support requests - either automatically (`auto_send`) or through
 a human approval queue. Requests it cannot resolve can be escalated by email to a human
 team, with the customer notified. A second, embedded agent (the **configuration
 copilot**) lets users configure all of the above by chatting in natural language.
@@ -21,13 +21,13 @@ fill 2 variables, `docker compose up -d --build`.
 
 | Layer | Tech | Notes |
 | --- | --- | --- |
-| Backend | Python 3.12, FastAPI, SQLAlchemy 2 (sync), Pydantic v2 | No async DB, no Celery — deliberately simple |
+| Backend | Python 3.12, FastAPI, SQLAlchemy 2 (sync), Pydantic v2 | No async DB, no Celery - deliberately simple |
 | Scheduler | APScheduler `BackgroundScheduler` | One tick/minute, in-process |
 | DB | PostgreSQL 16 (prod), SQLite (tests only) | `create_all` + tiny additive migrations |
-| Mail | stdlib `imaplib` / `smtplib` | No OAuth in v1 — app passwords for Gmail/Outlook |
+| Mail | stdlib `imaplib` / `smtplib` | No OAuth in v1 - app passwords for Gmail/Outlook |
 | LLM | `openai` SDK via a provider registry | OpenAI official or any OpenAI-compatible endpoint |
 | Frontend | React 18 + Vite, plain JSX, react-router v6 | No TypeScript, no state library |
-| Fonts/icons | @fontsource (Archivo Black, Space Grotesk), Font Awesome free | All bundled locally — never add CDN calls |
+| Fonts/icons | @fontsource (Archivo Black, Space Grotesk), Font Awesome free | All bundled locally - never add CDN calls |
 | Deploy | Docker multi-stage (node build → python image serving API + static) | 2 services: `app` + `db` |
 
 ## Repository layout
@@ -60,7 +60,7 @@ frontend/src/
                      KnowledgeTab, DocumentsTab, ApprovalsTab, RunsTab), TopBar,
                      SimpleLayout, AssistantPanel, ModelSelect, ui.jsx (Badge/Alert/
                      Field/Spinner/Modal)
-  styles.css         THE design system — all tokens and component classes
+  styles.css         THE design system - all tokens and component classes
 Dockerfile           Multi-stage build; STATIC_DIR=/app/static
 docker-compose.yml   app + postgres; DATABASE_URL overridable for external DB
 ```
@@ -71,7 +71,7 @@ docker-compose.yml   app + postgres; DATABASE_URL overridable for external DB
 1. Scheduler tick (every 60 s) finds agents where `enabled && mailbox.active` and
    `last_run_at + interval_minutes` elapsed → `run_mailbox()` (also triggered manually
    via `POST /api/mailboxes/{id}/run`, and each run writes a `RunLog` row).
-2. IMAP fetch: **the unread flag is the source of truth** — fetch ALL `UNSEEN` mail
+2. IMAP fetch: **the unread flag is the source of truth** - fetch ALL `UNSEEN` mail
    (no UID gate), folder opened **readonly** (BODY.PEEK, so fetching never flips
    `\Seen`). A message already in the DB but still unread is **re-queued** (status →
    `new`, prior classification cleared, stale unsent drafts dropped) and reprocessed;
@@ -81,8 +81,8 @@ docker-compose.yml   app + postgres; DATABASE_URL overridable for external DB
    from the mailbox's own address are stored as `ignored` (anti-loop) and marked read.
 3. Each `new` email (including leftovers from previous failed runs): classify (sets
    `category` + `category_reason`, `processed_at`). `spam` is always `ignored`; every
-   other category goes to `generate_reply()`, which — guided by the agent's playbooks
-   & guidelines — returns `{action: reply|escalate|ignore, body, reason}` (stored as
+   other category goes to `generate_reply()`, which - guided by the agent's playbooks
+   & guidelines - returns `{action: reply|escalate|ignore, body, reason}` (stored as
    `action_reason`). This is how non-support mail (e.g. marketing) can be politely
    declined or ignored per the user's playbooks.
    - ignore: status `ignored` (with the decision `reason`).
@@ -107,48 +107,48 @@ Replies: `draft → sent | rejected`.
 Tool-calling loop (max 8 rounds) over `POST /api/mailboxes/{id}/assistant`. The
 frontend sends the whole message history each turn; the backend rebuilds the system
 prompt (fresh config snapshot) every call. Tools mirror exactly what the UI can do
-(agent config, documents, mailbox name/active, recent emails, model list) — **IMAP/SMTP
+(agent config, documents, mailbox name/active, recent emails, model list) - **IMAP/SMTP
 credentials are deliberately out of its reach; keep it that way.** Write-tools report
 `{ok: true}` → collected into `actions[]` + `changed` flag; the frontend bumps a
 `refreshKey` to remount the tabs so forms reload.
 
 ### LLM provider layer (`providers.py`)
-`PROVIDERS` registry: `openai` (official endpoint, **curated** model list — the live
+`PROVIDERS` registry: `openai` (official endpoint, **curated** model list - the live
 /models endpoint mixes in embeddings/TTS/etc.) and `openai-compatible` (custom
 base_url, models fetched **live**). Adding a new API (e.g. Anthropic) = add a registry
 entry and give it its own `build_client` / `list_models` behavior; nothing else should
-change. The curated `OPENAI_MODELS` list is maintained by hand — check the official
+change. The curated `OPENAI_MODELS` list is maintained by hand - check the official
 docs when touching it (July 2026: gpt-5.6-sol/terra/luna, gpt-5.5[-pro],
 gpt-5.4[-pro|-mini|-nano], gpt-4.1[-mini], gpt-4o-mini).
 
 ### Settings resolution order
 DB row (`AppSettings`, set in the UI) wins over env vars (`OPENAI_API_KEY`,
 `OPENAI_BASE_URL`, `DEFAULT_MODEL`). Per-agent `model` overrides the platform default.
-`get_llm(db)` returns **exactly** `(client, model)` — everything unpacks 2 values.
+`get_llm(db)` returns **exactly** `(client, model)` - everything unpacks 2 values.
 
-## Hard-earned gotchas — do not re-break these
+## Hard-earned gotchas - do not re-break these
 
 - **Never create the OpenAI client with `base_url=None`**: the SDK then falls back to
   the `OPENAI_BASE_URL` env var, which docker-compose sets to `""` (empty string ≠
   None) → `APIConnectionError: Connection error.`. `build_client()` always passes an
   explicit URL. Any new provider must do the same.
-- **IMAP `UID N:*` always matches at least the last message** even when its UID < N —
+- **IMAP `UID N:*` always matches at least the last message** even when its UID < N -
   always re-filter `uid > last_seen_uid` after the search.
 - **Empty string means "keep"**: mailbox passwords on update, and the API key in
   settings (`"-"` clears it). Don't "fix" this into overwriting with empty values.
 - **Changing `SECRET_KEY` invalidates every stored credential** (Fernet key is derived
-  from it) — never rotate it silently in upgrade paths.
+  from it) - never rotate it silently in upgrade paths.
 - **Schema changes need a migration statement**: `create_all` does NOT alter existing
   tables. Add an `ALTER TABLE …` string to `_migrate()` in `main.py` (idempotent:
   wrapped in try/except, one transaction per statement, must work on Postgres; SQLite
   tolerance via the try/except). For anything non-additive, introduce Alembic first.
-- **The Docker volume persists across `docker compose down`** — user data survives
+- **The Docker volume persists across `docker compose down`** - user data survives
   rebuilds. Never `down -v` without explicit user consent.
 - The SPA catch-all route in `main.py` must stay LAST and only registers when
-  `STATIC_DIR` exists — don't add routes after it, and keep all API routes under `/api`.
+  `STATIC_DIR` exists - don't add routes after it, and keep all API routes under `/api`.
 - Scheduler: single tick job with `max_instances=1`; interval changes are picked up
   naturally on the next tick. Don't create one APScheduler job per mailbox.
-- LLM JSON output: some compatible endpoints reject `response_format=json_object` —
+- LLM JSON output: some compatible endpoints reject `response_format=json_object` -
   `_chat_json()` retries without it and `_parse_json()` tolerates fenced/embedded JSON.
   Keep that fallback when touching LLM calls.
 
@@ -160,7 +160,7 @@ DB row (`AppSettings`, set in the UI) wins over env vars (`OPENAI_API_KEY`,
   `SessionLocal()` (see `run_mailbox_standalone`). Don't introduce async piecemeal.
 - Layering: `api/` = HTTP concerns only (validation, status codes); `services/` = all
   business logic. Routers declare `dependencies=[Depends(get_current_user)]` at router
-  level — every new router must be auth-protected the same way and registered in the
+  level - every new router must be auth-protected the same way and registered in the
   loop in `main.py`.
 - Error codes in use: 401 auth, 404 missing resource, 422 semantic validation,
   502 upstream failures (SMTP/LLM) with a readable message. Follow that mapping.
@@ -184,15 +184,15 @@ DB row (`AppSettings`, set in the UI) wins over env vars (`OPENAI_API_KEY`,
   component must be added to `pages/DesignSystem.jsx` (the living style guide at
   `/design`).
 - Highlight/underline effects: `.hl`, `.hl-pink`, `.ul-green`, `.ul-pink` (they have
-  `width: fit-content` so they hug the text on block elements — keep that).
+  `width: fit-content` so they hug the text on block elements - keep that).
 - Icons: Font Awesome solid, `<i className="fa-solid fa-…" />`, `fa-fw` in menus.
-  Everything (fonts, icons, JS) is bundled locally — never add a CDN `<link>`.
+  Everything (fonts, icons, JS) is bundled locally - never add a CDN `<link>`.
 
 ## Testing & verification workflow
 
 There is no CI yet. The verification loop that has caught every real bug so far:
 
-1. **Smoke test**: `backend/tests/smoke_test.py` — a `TestClient`-based end-to-end
+1. **Smoke test**: `backend/tests/smoke_test.py` - a `TestClient`-based end-to-end
    script. Run it with:
    `cd backend && PYTHONPATH=. .venv/Scripts/python tests/smoke_test.py`
    (needs `pip install httpx` on top of requirements). It runs against SQLite
@@ -201,15 +201,15 @@ There is no CI yet. The verification loop that has caught every real bug so far:
    auto-creation, documents, settings (key masking, provider fallback), providers/
    models endpoints, `get_llm` unpacking, and that the assistant fails with a clean
    502 *from the provider* (it sets `OPENAI_BASE_URL=""` to replicate the
-   docker-compose env — keep that line).
+   docker-compose env - keep that line).
 2. **Frontend build**: `npm run build` must pass (it's the only JS type-check we have).
 3. **Deploy check**: `docker compose up -d --build`, then hit `/api/health`, and for
    LLM-path changes run a real one-shot call inside the container
    (`docker exec autosupport-app-1 python -c "...get_llm...create(...)"`).
 4. **Visual check**: Playwright (MCP) screenshots of /login, /, /design after any CSS
-   change. Delete screenshot artifacts afterwards — they don't belong in the repo.
+   change. Delete screenshot artifacts afterwards - they don't belong in the repo.
 
-When debugging LLM/SDK errors, print the `__cause__` chain — the OpenAI SDK wraps
+When debugging LLM/SDK errors, print the `__cause__` chain - the OpenAI SDK wraps
 root causes in generic messages ("Connection error.").
 
 ## Checklist for common changes
@@ -230,7 +230,7 @@ ModelSelect). Explicit base_url, always.
 `DesignSystem.jsx` → check both a real page and `/design` visually.
 
 **Dependency updates**: frontend deps are pinned loosely (`^`); the Docker build is
-the source of truth — if `npm run build` and the image build pass, ship it.
+the source of truth - if `npm run build` and the image build pass, ship it.
 
 ## Environment variables (deploy-time)
 

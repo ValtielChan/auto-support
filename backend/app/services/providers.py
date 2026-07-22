@@ -23,7 +23,7 @@ class Provider:
     default_model: str = ""
 
 
-# Curated OpenAI list — chat-capable API models as of July 2026.
+# Curated OpenAI list - chat-capable API models as of July 2026.
 # GPT-5.6 family (Sol/Terra/Luna) is current; 5.5 and 5.4 remain available.
 OPENAI_MODELS = [
     "gpt-5.6-sol",
@@ -70,7 +70,7 @@ def build_client(provider_id: str, api_key: str, base_url: str | None) -> OpenAI
     provider would return its own client wrapper here.
 
     Always pass an explicit base_url: with None the SDK falls back to the
-    OPENAI_BASE_URL env var, which docker-compose sets to "" — an invalid URL.
+    OPENAI_BASE_URL env var, which docker-compose sets to "" - an invalid URL.
     """
     if provider_id == "openai":
         base_url = None  # official endpoint, always

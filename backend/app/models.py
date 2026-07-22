@@ -174,7 +174,7 @@ class Email(Base):
     status: Mapped[str] = mapped_column(String(50), default="new")
     error: Mapped[str | None] = mapped_column(Text, default=None)
     # When the agent last processed this email, and why it did what it did
-    # (the reply/escalate/ignore decision — distinct from category_reason above).
+    # (the reply/escalate/ignore decision - distinct from category_reason above).
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     action_reason: Mapped[str | None] = mapped_column(Text, default=None)
 

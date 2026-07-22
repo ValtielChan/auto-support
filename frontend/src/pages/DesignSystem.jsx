@@ -2,10 +2,10 @@ import { useState } from 'react'
 import { Alert, Badge, Field, Spinner } from '../components/ui.jsx'
 
 const COLORS = [
-  ['Green — primary', '--green', '#2EE88A'],
+  ['Green - primary', '--green', '#2EE88A'],
   ['Green dark', '--green-dark', '#12C96B'],
   ['Green pale', '--green-pale', '#C9F9E0'],
-  ['Pink — secondary', '--pink', '#FF90E8'],
+  ['Pink - secondary', '--pink', '#FF90E8'],
   ['Pink dark', '--pink-dark', '#F556CF'],
   ['Pink pale', '--pink-pale', '#FFD9F6'],
   ['Black', '--black', '#111111'],
@@ -48,7 +48,7 @@ export default function DesignSystem() {
         <h2><span className="hl">Colors</span></h2>
         <p className="muted">
           Two colors only: green (primary) and pink (secondary), each with a dark and pale
-          variant. Everything else is neutral — black, white, background, gray.
+          variant. Everything else is neutral - black, white, background, gray.
         </p>
         <div className="swatches">
           {COLORS.map(([label, varName, hex]) => (
@@ -122,7 +122,7 @@ export default function DesignSystem() {
           <textarea rows={3} placeholder="Multi-line text…" />
         </Field>
         <label className="checkbox">
-          <input type="checkbox" defaultChecked /> <strong>Checkbox</strong> — checked by default
+          <input type="checkbox" defaultChecked /> <strong>Checkbox</strong> - checked by default
         </label>
         <label className="checkbox">
           <input type="checkbox" /> Unchecked checkbox
@@ -146,7 +146,7 @@ export default function DesignSystem() {
         <h2><span className="hl">Icons</span></h2>
         <p className="muted">
           Font Awesome (free, solid set), bundled locally. Use{' '}
-          <code>{'<i className="fa-solid fa-…" />'}</code> — with <code>fa-fw</code> for
+          <code>{'<i className="fa-solid fa-…" />'}</code> - with <code>fa-fw</code> for
           fixed-width alignment in menus.
         </p>
         <div className="demo-row" style={{ fontSize: '1.3rem', gap: '1.1rem' }}>
@@ -192,8 +192,8 @@ export default function DesignSystem() {
 
       <div className="card">
         <h2><span className="hl">Alerts</span></h2>
-        <Alert>Something went wrong — this is the error alert.</Alert>
-        <Alert kind="success">All good — this is the success alert.</Alert>
+        <Alert>Something went wrong - this is the error alert.</Alert>
+        <Alert kind="success">All good - this is the success alert.</Alert>
       </div>
 
       <div className="card">
@@ -275,7 +275,7 @@ export default function DesignSystem() {
           <div className="muted">
             Reply <Badge value="draft" /> · gpt-5.6-terra
           </div>
-          <pre className="email-body">{'Hi,\n\nThanks for reaching out — here is the reply body.\n\nBest,\nSupport team'}</pre>
+          <pre className="email-body">{'Hi,\n\nThanks for reaching out - here is the reply body.\n\nBest,\nSupport team'}</pre>
         </div>
       </div>
 
@@ -304,7 +304,7 @@ export default function DesignSystem() {
               <div className="msg msg-assistant">Hi! Describe your product and I’ll write the context for you.</div>
               <div className="msg msg-user">My product is a todo app for teams.</div>
               <div className="msg msg-assistant">
-                Done — I wrote a full product context.
+                Done - I wrote a full product context.
                 <div className="msg-actions">
                   <span className="badge badge-success">✓ Agent configuration updated</span>
                 </div>

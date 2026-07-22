@@ -99,7 +99,7 @@ def classify_email(client: OpenAI, model: str, agent: Agent, email: Email) -> di
     if playbooks:
         playbook_block = (
             "The inbox owner describes the kinds of email they receive and how they "
-            "think about them — use this to pick the most accurate category:\n"
+            "think about them - use this to pick the most accurate category:\n"
             + "\n".join(f"- {p.title}: {(p.body or '')[:400]}" for p in playbooks)
             + "\n\n"
         )
@@ -157,7 +157,7 @@ def draft_reply(
 ) -> str:
     """On-demand: write a full reply body for a message, following an instruction.
 
-    Used by the Inbox composer's AI assist — returns plain text ready to edit/send.
+    Used by the Inbox composer's AI assist - returns plain text ready to edit/send.
     """
     parts = [
         "You are a customer support agent drafting an email reply on behalf of a company.",
@@ -195,8 +195,8 @@ def generate_reply(
 ) -> dict:
     """Return {"action": "reply"|"escalate"|"ignore", "body": str, "reason": str}.
 
-    Every non-spam email is handed here; the agent decides — guided by its
-    playbooks & guidelines — whether to reply (e.g. politely decline a marketing
+    Every non-spam email is handed here; the agent decides - guided by its
+    playbooks & guidelines - whether to reply (e.g. politely decline a marketing
     offer), escalate, or ignore. When action is "escalate", body is the message to
     send to the CUSTOMER. When action is "ignore", body is empty.
     """
@@ -208,7 +208,7 @@ def generate_reply(
     ]
     if facts:
         parts.append(
-            "\n## Product facts (authoritative — you may rely on these to resolve requests)"
+            "\n## Product facts (authoritative - you may rely on these to resolve requests)"
         )
         for f in facts:
             parts.append(f"- {f.title}: {(f.body or '')[:MAX_DOC_CHARS]}")
@@ -218,7 +218,7 @@ def generate_reply(
             parts.append(f"\n### {doc.title}\n{(doc.content or '')[:MAX_DOC_CHARS]}")
     if playbooks:
         parts.append(
-            "\n## Handling playbooks (how to deal with specific situations — follow the "
+            "\n## Handling playbooks (how to deal with specific situations - follow the "
             "one that matches this email)"
         )
         for p in playbooks:

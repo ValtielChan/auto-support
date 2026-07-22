@@ -1,7 +1,7 @@
 """In-app configuration copilot.
 
 A tool-calling LLM agent embedded in the UI: the user talks to it in natural
-language and it can read and modify everything configurable on a mailbox —
+language and it can read and modify everything configurable on a mailbox -
 agent settings, product context, guidelines, documents… The same fields the
 user can edit by hand, nothing more (credentials are out of reach).
 """
@@ -62,7 +62,7 @@ TOOLS = [
                     "model": {"type": "string", "description": "LLM model id, empty string = platform default"},
                     "language": {"type": "string", "description": "Forced reply language, empty = customer's language"},
                     "product_context": {"type": "string", "description": "General product/service overview"},
-                    "guidelines": {"type": "string", "description": "Writing style and tone ONLY (not per-situation rules — use playbooks for those)"},
+                    "guidelines": {"type": "string", "description": "Writing style and tone ONLY (not per-situation rules - use playbooks for those)"},
                     "signature": {"type": "string"},
                     "escalation_enabled": {"type": "boolean"},
                     "escalation_email": {"type": "string"},
@@ -284,7 +284,7 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "delete_inbox_messages",
-            "description": "Permanently delete one or more live messages by uid. Destructive — confirm with the user first.",
+            "description": "Permanently delete one or more live messages by uid. Destructive - confirm with the user first.",
             "parameters": {
                 "type": "object",
                 "properties": {"uids": {"type": "array", "items": {"type": "integer"}}},
@@ -346,19 +346,19 @@ def _system_prompt(db: Session, mailbox: Mailbox) -> str:
         "- product_context: a general overview of the product/service.\n"
         "- guidelines: writing STYLE & TONE only.\n"
         "- signature: appended to every reply.\n"
-        "- playbooks (knowledge, kind='playbook'): per-situation rules — for each "
+        "- playbooks (knowledge, kind='playbook'): per-situation rules - for each "
         "type of email (support request, SEO outreach, marketplace partner…), what "
         "the agent should do. This is where per-case behavior lives, NOT guidelines.\n"
         "- facts (knowledge, kind='fact'): discrete authoritative product specifics "
         "(limits, pricing, how a feature works) the agent can use to resolve requests.\n"
         "- documents: long-form reference material (FAQ, guides).\n\n"
         "You can also browse and act on the LIVE mailbox over IMAP (list_inbox, "
-        "read_inbox_message), and — only when the user explicitly asks — mark "
+        "read_inbox_message), and - only when the user explicitly asks - mark "
         "messages read/unread, send replies, or delete messages. Always confirm "
         "before deleting.\n\n"
         "Guidance:\n"
         "- When the user roughly describes their product, write a COMPLETE, "
-        "well-structured product context — expand and structure rather than copying "
+        "well-structured product context - expand and structure rather than copying "
         "their words verbatim. Put per-situation handling into playbooks and concrete "
         "product specifics into facts, rather than dumping everything into guidelines. "
         "Ask a short clarifying question only when something essential is missing.\n"
@@ -563,7 +563,7 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
         from ..config import settings as env_settings
         from ..models import AppSettings
 
-        # NB: do NOT re-import crypto here — it's imported at module level. A local
+        # NB: do NOT re-import crypto here - it's imported at module level. A local
         # `from . import crypto` would make `crypto` function-local everywhere in
         # _execute, breaking the inbox tools above (UnboundLocalError).
         row = db.query(AppSettings).first()
@@ -621,7 +621,7 @@ def chat(db: Session, mailbox: Mailbox, messages: list[dict]) -> dict:
             )
 
     return {
-        "reply": "Done — I applied the changes above (I hit my step limit before writing a longer summary).",
+        "reply": "Done - I applied the changes above (I hit my step limit before writing a longer summary).",
         "actions": actions,
         "changed": changed,
     }

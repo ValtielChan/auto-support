@@ -1,7 +1,7 @@
 """Symmetric encryption for stored credentials (IMAP/SMTP passwords, API keys).
 
 The Fernet key is derived from SECRET_KEY, so changing SECRET_KEY invalidates
-stored credentials — they would need to be re-entered.
+stored credentials - they would need to be re-entered.
 """
 
 import base64

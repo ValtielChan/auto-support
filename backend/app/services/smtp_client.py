@@ -11,7 +11,7 @@ def _header(value: str) -> str:
 
     Original subjects/addresses pulled from IMAP can contain raw newlines, which
     the email lib rejects ("Header values may not contain linefeed or carriage
-    return characters") — that aborts the reply/escalation for that mail.
+    return characters") - that aborts the reply/escalation for that mail.
     """
     return re.sub(r"\s+", " ", (value or "").replace("\r", " ").replace("\n", " ")).strip()
 

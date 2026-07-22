@@ -10,7 +10,7 @@ from email.message import Message
 from email.utils import parseaddr, parsedate_to_datetime
 
 # Zero-width / invisible characters marketers stuff into mail (and the combining
-# grapheme joiner, &#847;) — dropped so bodies read as real text.
+# grapheme joiner, &#847;) - dropped so bodies read as real text.
 _INVISIBLE = dict.fromkeys(
     [0x200B, 0x200C, 0x200D, 0x2060, 0xFEFF, 0x00AD, 0x034F, 0x180E], None
 )
@@ -45,7 +45,7 @@ def test_connection(host, port, use_ssl, username, password, folder="INBOX") -> 
         if status != "OK":
             raise RuntimeError(f"Cannot open folder {folder!r}: {data}")
         count = int(data[0])
-        return f"Connected — folder {folder} contains {count} message(s)"
+        return f"Connected - folder {folder} contains {count} message(s)"
     finally:
         try:
             conn.logout()

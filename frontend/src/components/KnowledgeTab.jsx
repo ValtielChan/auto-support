@@ -6,14 +6,14 @@ const LABELS = {
   playbook: {
     heading: 'Response playbooks',
     intro:
-      'Tell the agent how to handle each type of email it receives. One playbook per situation — the agent follows the one that matches an incoming email.',
+      'Tell the agent how to handle each type of email it receives. One playbook per situation - the agent follows the one that matches an incoming email.',
     titleLabel: 'Situation / email type',
     titleHint: 'e.g. "Support request from a user", "SEO cold outreach", "Marketplace partner"',
     titlePlaceholder: 'When the agent receives…',
     bodyLabel: 'What the agent should do',
     bodyPlaceholder: 'Describe the desired handling: reply, escalate, ignore, ask for details…',
     addLabel: 'Add playbook',
-    empty: 'No playbooks yet — add one per type of email you want handled a certain way.',
+    empty: 'No playbooks yet - add one per type of email you want handled a certain way.',
   },
   fact: {
     heading: 'Product facts',
@@ -25,7 +25,7 @@ const LABELS = {
     bodyLabel: 'Detail',
     bodyPlaceholder: 'The precise fact the agent may use…',
     addLabel: 'Add fact',
-    empty: 'No product facts yet — add the specifics the agent can use to unblock requests.',
+    empty: 'No product facts yet - add the specifics the agent can use to unblock requests.',
   },
 }
 

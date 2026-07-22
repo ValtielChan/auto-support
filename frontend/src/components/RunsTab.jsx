@@ -75,7 +75,7 @@ function RunRow({ run, open, onToggle }) {
         <td>{run.escalated}</td>
         <td>
           {report.length === 0 ? (
-            <span className="muted">—</span>
+            <span className="muted">-</span>
           ) : (
             <button className="btn btn-ghost" onClick={onToggle}>
               {open ? 'Hide' : `View (${report.length})`}
@@ -101,9 +101,9 @@ function RunRow({ run, open, onToggle }) {
                   <tr key={e.email_id}>
                     <td>{e.from_address}</td>
                     <td>{e.subject || <span className="muted">(no subject)</span>}</td>
-                    <td>{e.category ? <Badge value={e.category} /> : <span className="muted">—</span>}</td>
+                    <td>{e.category ? <Badge value={e.category} /> : <span className="muted">-</span>}</td>
                     <td><Badge value={e.status} /></td>
-                    <td>{e.reason || <span className="muted">—</span>}</td>
+                    <td>{e.reason || <span className="muted">-</span>}</td>
                   </tr>
                 ))}
               </tbody>

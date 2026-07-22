@@ -97,7 +97,7 @@ def _fetch_into_db(db: Session, mailbox: Mailbox) -> list[Email]:
     for m in messages:
         mailbox.last_seen_uid = max(mailbox.last_seen_uid, m["imap_uid"])
         message_id = m["message_id"]
-        # The same Message-ID can appear under several UIDs in one fetch — handle it once.
+        # The same Message-ID can appear under several UIDs in one fetch - handle it once.
         if message_id in seen_ids:
             continue
         seen_ids.add(message_id)
@@ -175,12 +175,12 @@ def _process_email(db: Session, mailbox: Mailbox, agent: Agent, client, model: s
     email.category_reason = classification["reason"]
     email.processed_at = _utcnow()
 
-    # Spam is never engaged. Everything else goes through the reply step, which —
-    # guided by the agent's playbooks & guidelines — decides reply / escalate /
+    # Spam is never engaged. Everything else goes through the reply step, which -
+    # guided by the agent's playbooks & guidelines - decides reply / escalate /
     # ignore (so e.g. a marketing offer can be politely declined if configured).
     if email.category == "spam":
         email.status = "ignored"
-        email.action_reason = "Classified as spam — the agent never engages spam."
+        email.action_reason = "Classified as spam - the agent never engages spam."
         return
 
     allow_escalation = bool(agent.escalation_enabled and agent.escalation_email)
@@ -271,8 +271,8 @@ def run_mailbox(db: Session, mailbox_id: int, trigger: str = "scheduled") -> Run
             db.commit()
 
         agent.last_run_at = _utcnow()
-        # Report every mail this run touched — fetched (incl. auto-ignored) and
-        # processed (incl. leftovers) — deduped by id, each with its final outcome.
+        # Report every mail this run touched - fetched (incl. auto-ignored) and
+        # processed (incl. leftovers) - deduped by id, each with its final outcome.
         touched = {e.id: e for e in fetched}
         touched.update({e.id: e for e in pending})
         run.report = _build_report(touched.values())

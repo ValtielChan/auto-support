@@ -1,11 +1,11 @@
 /* ============================================================
-   AUTO SUPPORT — neo-brutalist design system
+   AUTO SUPPORT - neo-brutalist design system
    Solid colors, 0 radius, thick black borders, hard shadows.
    Primary: green · Secondary: pink · Accent/danger: orange-red
    ============================================================ */
 
 :root {
-  /* palette — green primary, pink secondary, everything else is neutral */
+  /* palette - green primary, pink secondary, everything else is neutral */
   --green: #2ee88a;
   --green-dark: #12c96b;
   --green-pale: #c9f9e0;

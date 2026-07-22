@@ -39,7 +39,7 @@ export default function App() {
   )
 }
 
-// Old bookmarks pointed at /mailboxes/:id — send them to the new /m/:id.
+// Old bookmarks pointed at /mailboxes/:id - send them to the new /m/:id.
 function LegacyMailboxRedirect() {
   const { id } = useParams()
   return <Navigate to={`/m/${id}`} replace />

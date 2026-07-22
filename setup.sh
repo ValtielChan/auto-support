@@ -9,7 +9,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 if [ -f .env ]; then
-  echo "✓ .env already exists — leaving it untouched."
+  echo "✓ .env already exists - leaving it untouched."
   exit 0
 fi
 

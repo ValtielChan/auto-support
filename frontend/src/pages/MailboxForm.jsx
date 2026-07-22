@@ -103,7 +103,7 @@ export default function MailboxForm() {
           <h2>General</h2>
           <div className="grid-2">
             <Field label="Display name">
-              <input required value={form.name} onChange={set('name')} placeholder="Support — MyProduct" />
+              <input required value={form.name} onChange={set('name')} placeholder="Support - MyProduct" />
             </Field>
             <Field label="Email address">
               <input required type="email" value={form.email_address} onChange={set('email_address')} placeholder="support@myproduct.com" />

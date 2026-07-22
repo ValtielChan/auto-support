@@ -1,7 +1,7 @@
 """Background scheduler: a single tick that runs due mailboxes.
 
 Using one periodic tick (instead of one APScheduler job per mailbox) keeps
-interval changes trivial — the next tick simply picks up the new value.
+interval changes trivial - the next tick simply picks up the new value.
 """
 
 import logging

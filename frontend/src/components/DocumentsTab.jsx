@@ -100,7 +100,7 @@ export default function DocumentsTab({ mailboxId }) {
           <Field label="Title">
             <input required value={title} onChange={(e) => setTitle(e.target.value)} />
           </Field>
-          <Field label="Import from file" hint=".txt / .md — loaded into the text area below">
+          <Field label="Import from file" hint=".txt / .md - loaded into the text area below">
             <input
               ref={fileInput}
               type="file"

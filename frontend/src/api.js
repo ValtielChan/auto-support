@@ -108,4 +108,4 @@ export const api = {
   stats: () => request('/dashboard/stats'),
 }
 
-export const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString() : '—')
+export const fmtDate = (iso) => (iso ? new Date(iso).toLocaleString() : '-')

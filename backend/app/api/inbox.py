@@ -1,5 +1,5 @@
 """Live mailbox ('augmented inbox'): browse the real IMAP folder, toggle read/
-unread, reply and delete — merged with the agent's verdict on each message."""
+unread, reply and delete - merged with the agent's verdict on each message."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session

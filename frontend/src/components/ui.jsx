@@ -15,7 +15,7 @@ const STATUS_LABELS = {
 }
 
 export function Badge({ value }) {
-  if (!value) return <span className="badge badge-muted">—</span>
+  if (!value) return <span className="badge badge-muted">-</span>
   return (
     <span className={`badge badge-${value}`}>{STATUS_LABELS[value] || value}</span>
   )

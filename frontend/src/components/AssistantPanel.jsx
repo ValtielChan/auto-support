@@ -94,7 +94,7 @@ export default function AssistantPanel({ mailboxId, onChanged }) {
               send(e)
             }
           }}
-          placeholder="e.g. My product is a todo app for teams — write me a full product context and friendly guidelines"
+          placeholder="e.g. My product is a todo app for teams - write me a full product context and friendly guidelines"
           disabled={busy}
         />
         <button className="btn btn-primary" disabled={busy || !input.trim()}>
