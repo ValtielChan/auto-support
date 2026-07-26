@@ -586,7 +586,7 @@ def chat(db: Session, mailbox: Mailbox, messages: list[dict]) -> dict:
 
     for _ in range(MAX_ROUNDS):
         resp = client.chat.completions.create(
-            model=model, messages=convo, tools=TOOLS, temperature=0.4
+            model=model, messages=convo, tools=TOOLS
         )
         msg = resp.choices[0].message
         if not msg.tool_calls:

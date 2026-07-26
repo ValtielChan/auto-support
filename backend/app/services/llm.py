@@ -46,13 +46,14 @@ def get_llm(db: Session) -> tuple[OpenAI, str]:
 def _chat_json(client: OpenAI, model: str, system: str, user: str) -> dict:
     """Call the model expecting a JSON object back, tolerating endpoints that
     do not support response_format."""
+    # No temperature: recent models (gpt-5.x reasoning family) reject any
+    # non-default value with a 400, and the default works everywhere.
     kwargs = dict(
         model=model,
         messages=[
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
-        temperature=0.3,
     )
     try:
         resp = client.chat.completions.create(
@@ -179,7 +180,6 @@ def draft_reply(
     resp = client.chat.completions.create(
         model=model,
         messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-        temperature=0.5,
     )
     return (resp.choices[0].message.content or "").strip()
 
