@@ -34,6 +34,10 @@ queue. It ships as a single `docker compose up`.
   It can also browse the live mailbox and, on request, mark messages or send replies.
 - **Full traceability** - every email, classification, reply and run is stored; each run keeps
   a per-email report (outcome + reason).
+- **Export / import** - download a mailbox's entire configuration (connection settings, agent,
+  playbooks, facts, documents) as a JSON file and import it on the Home page - as a backup or
+  to move it to another server. Passwords are only included if you opt in, and imported agents
+  always start disabled so you can review before anything is sent.
 - **Safe by default** - credentials encrypted at rest, single admin login, auto-send off until
   you trust the answers, and spam/auto-generated mail is never answered.
 
@@ -173,42 +177,14 @@ answered.
 
 ---
 
-## Development
-
-Backend:
-
-```bash
-cd backend
-python -m venv .venv && source .venv/bin/activate   # .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-# Needs a reachable PostgreSQL, e.g.:  docker compose up -d db
-uvicorn app.main:app --reload
-```
-
-Frontend (the dev server proxies `/api` to localhost:8000):
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-A `TestClient`-based end-to-end smoke test:
-
-```bash
-cd backend
-PYTHONPATH=. DATABASE_URL="sqlite:///./smoke_test.db" python tests/smoke_test.py
-```
-
-See [`AGENT.md`](AGENT.md) for architecture, conventions and gotchas.
-
----
-
 ## Security notes
 
 - Always run behind HTTPS (a reverse proxy) in production.
 - Mailbox passwords and the API key are encrypted at rest with a key derived from `SECRET_KEY`.
 - Start with **auto-send disabled** (the default) and review drafts until you trust the agent.
+- Mailbox exports made with "Include passwords" contain them in **clear text** (encrypted
+  values could not be restored on a server with a different `SECRET_KEY`). Store such files
+  like you would store the passwords themselves.
 - Rendered HTML emails run in a sandboxed frame with scripts disabled; remote images do load
   (like any webmail), which can include tracking pixels.
 
