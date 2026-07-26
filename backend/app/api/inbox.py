@@ -58,13 +58,15 @@ def _verdicts(db: Session, mailbox_id: int, message_ids: list[str]) -> dict:
 def list_inbox(
     mailbox_id: int,
     limit: int = Query(default=50, ge=1, le=200),
+    offset: int = Query(default=0, ge=0),
     db: Session = Depends(get_db),
 ):
     mailbox = _mailbox(db, mailbox_id)
     try:
-        messages = imap_client.list_mailbox(**_imap_args(mailbox), limit=limit)
+        page = imap_client.list_mailbox(**_imap_args(mailbox), limit=limit, offset=offset)
     except Exception as exc:
         raise HTTPException(status_code=502, detail=f"IMAP error: {exc}")
+    messages = page["items"]
     verdicts = _verdicts(db, mailbox_id, [m["message_id"] for m in messages if m["message_id"]])
     items = []
     for m in messages:
@@ -78,7 +80,7 @@ def list_inbox(
                 "agent_reason": (e.error if e and e.status == "error" else (e.action_reason or e.category_reason) if e else None),
             }
         )
-    return InboxList(items=items)
+    return InboxList(items=items, total=page["total"], offset=offset)
 
 
 @router.get("/{mailbox_id}/inbox/{uid}", response_model=InboxMessage)

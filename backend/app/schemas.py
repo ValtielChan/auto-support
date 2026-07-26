@@ -287,6 +287,10 @@ class InboxMessage(InboxItem):
 
 class InboxList(BaseModel):
     items: list[InboxItem]
+    # Folder-wide message count and the page's offset, so the client can paint
+    # a first small page fast and stream the rest in the background.
+    total: int = 0
+    offset: int = 0
 
 
 class InboxFlagIn(BaseModel):

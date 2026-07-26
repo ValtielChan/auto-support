@@ -505,7 +505,7 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
             folder=mailbox.imap_folder,
         )
         if name == "list_inbox":
-            msgs = imap_client.list_mailbox(**imap_args, limit=min(int(args.get("limit", 30)), 100))
+            msgs = imap_client.list_mailbox(**imap_args, limit=min(int(args.get("limit", 30)), 100))["items"]
             verdicts = {
                 e.message_id: e
                 for e in db.query(Email).filter(

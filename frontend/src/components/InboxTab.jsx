@@ -2,23 +2,52 @@ import { useEffect, useRef, useState } from 'react'
 import { api, fmtDate } from '../api.js'
 import { Alert, Badge, Modal, Spinner } from './ui.jsx'
 
+// First paint fast, then stream: a small first page renders as soon as it
+// arrives, the rest loads in the background (matters when the IMAP server is
+// geographically far - every request pays the full latency).
+const FIRST_PAGE = 10
+const MAX_MESSAGES = 200
+
 export default function InboxTab({ mailboxId }) {
   const [items, setItems] = useState(null)
+  const [total, setTotal] = useState(0)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState('')
   const [selected, setSelected] = useState(() => new Set())
   const [openUid, setOpenUid] = useState(null)
   const [busy, setBusy] = useState(false)
+  const loadSeq = useRef(0)
 
-  const load = () => {
+  const load = async () => {
     setError('')
-    return api
-      .listInbox(mailboxId)
-      .then((r) => setItems(r.items))
-      .catch((e) => setError(e.message))
+    const seq = ++loadSeq.current
+    try {
+      const first = await api.listInbox(mailboxId, FIRST_PAGE, 0)
+      if (seq !== loadSeq.current) return
+      setItems(first.items)
+      setTotal(first.total)
+      if (first.total <= first.items.length) return
+      setLoadingMore(true)
+      const rest = await api.listInbox(mailboxId, MAX_MESSAGES - FIRST_PAGE, FIRST_PAGE)
+      if (seq !== loadSeq.current) return
+      // Dedupe by uid: a mail arriving between the two requests shifts offsets.
+      setItems((prev) => {
+        const have = new Set((prev || []).map((m) => m.uid))
+        return [...(prev || []), ...rest.items.filter((m) => !have.has(m.uid))]
+      })
+      setTotal(rest.total)
+      setLoadingMore(false)
+    } catch (e) {
+      if (seq !== loadSeq.current) return
+      setError(e.message)
+      setLoadingMore(false)
+    }
   }
 
   useEffect(() => {
     setItems(null)
+    setTotal(0)
+    setLoadingMore(false)
     setOpenUid(null)
     load()
   }, [mailboxId])
@@ -61,7 +90,7 @@ export default function InboxTab({ mailboxId }) {
         <div className="inbox-list-head">
           <h2>Inbox</h2>
           <span className="muted">
-            {items.length} · {unreadCount} unread
+            {loadingMore ? `${items.length}/${total || items.length}` : items.length} · {unreadCount} unread
           </span>
           <button className="btn btn-small" onClick={load} disabled={busy}>
             <i className="fa-solid fa-rotate" /> Refresh
@@ -129,6 +158,11 @@ export default function InboxTab({ mailboxId }) {
                 ))}
               </tbody>
             </table>
+          )}
+          {loadingMore && (
+            <p className="muted inbox-loading-more">
+              <i className="fa-solid fa-rotate fa-spin" /> Loading older messages…
+            </p>
           )}
         </div>
       </div>

@@ -175,13 +175,42 @@ def _uid_set(uids) -> str:
     return ",".join(str(int(u)) for u in uids)
 
 
-def list_mailbox(
-    host, port, use_ssl, username, password, folder, limit: int = 50
-) -> list[dict]:
-    """Return the most recent messages with their read/unread flag (newest first).
+_UID_RE = re.compile(rb"UID (\d+)")
 
-    Read-only: uses BODY.PEEK so listing never flips the \\Seen flag. This is the
-    live mailbox view, independent of what the agent has ingested.
+
+def _fetch_many(conn, uids, parts: str):
+    """FETCH a whole uid-set in ONE round-trip; yield (uid, meta, payload).
+
+    Per-message fetches dominate latency on distant servers (one network
+    round-trip each); a single multi-uid FETCH brings N messages back in one.
+    Servers may answer in any order, so the uid is parsed from each response
+    (RFC 3501 guarantees UID FETCH responses include it).
+    """
+    if not uids:
+        return
+    status, data = conn.uid("fetch", _uid_set(uids), parts)
+    if status != "OK":
+        raise RuntimeError(f"Fetch failed: {data}")
+    for item in data or []:
+        if not isinstance(item, tuple) or len(item) < 2:
+            continue
+        meta = item[0] or b""
+        m = _UID_RE.search(meta)
+        if m is None:
+            continue
+        yield int(m.group(1)), meta, item[1]
+
+
+def list_mailbox(
+    host, port, use_ssl, username, password, folder, limit: int = 50, offset: int = 0
+) -> dict:
+    """Return a page of the most recent messages, newest first:
+    {"items": [...], "total": <messages in folder>}.
+
+    offset=0 is the newest message; the whole page is fetched in a single
+    FETCH round-trip so the first paint stays fast even far from the server.
+    Read-only: uses BODY.PEEK so listing never flips the \\Seen flag. This is
+    the live mailbox view, independent of what the agent has ingested.
     """
     conn = _connect(host, port, use_ssl, username, password)
     try:
@@ -191,20 +220,15 @@ def list_mailbox(
         status, data = conn.uid("search", None, "ALL")
         if status != "OK":
             raise RuntimeError(f"Search failed: {data}")
-        uids = sorted(int(u) for u in (data[0].split() if data[0] else []))
-        recent = uids[-limit:]
-        out = []
-        for uid in reversed(recent):  # newest first
-            status, d = conn.uid(
-                "fetch",
-                str(uid),
-                "(FLAGS BODY.PEEK[HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)])",
-            )
-            if status != "OK" or not d or d[0] is None or not isinstance(d[0], tuple):
+        uids = sorted((int(u) for u in (data[0].split() if data[0] else [])), reverse=True)
+        page = uids[offset : offset + limit]  # newest first
+        by_uid = {}
+        for uid, meta, payload in _fetch_many(
+            conn, page, "(FLAGS BODY.PEEK[HEADER.FIELDS (SUBJECT FROM DATE MESSAGE-ID)])"
+        ):
+            if not isinstance(payload, (bytes, bytearray)):
                 continue
-            meta = d[0][0] or b""
-            seen = b"\\Seen" in meta
-            hdr = email.message_from_bytes(d[0][1])
+            hdr = email.message_from_bytes(payload)
             from_name, from_addr = parseaddr(_decode_str(hdr.get("From")))
             received_at = None
             if hdr.get("Date"):
@@ -214,17 +238,15 @@ def list_mailbox(
                         received_at = received_at.replace(tzinfo=timezone.utc)
                 except Exception:
                     received_at = None
-            out.append(
-                {
-                    "uid": uid,
-                    "message_id": (hdr.get("Message-ID") or "").strip(),
-                    "from_address": f"{from_name} <{from_addr}>".strip() if from_name else from_addr,
-                    "subject": _decode_str(hdr.get("Subject")),
-                    "received_at": received_at,
-                    "seen": seen,
-                }
-            )
-        return out
+            by_uid[uid] = {
+                "uid": uid,
+                "message_id": (hdr.get("Message-ID") or "").strip(),
+                "from_address": f"{from_name} <{from_addr}>".strip() if from_name else from_addr,
+                "subject": _decode_str(hdr.get("Subject")),
+                "received_at": received_at,
+                "seen": b"\\Seen" in meta,
+            }
+        return {"items": [by_uid[u] for u in page if u in by_uid], "total": len(uids)}
     finally:
         try:
             conn.logout()
@@ -317,14 +339,15 @@ def fetch_new_messages(host, port, use_ssl, username, password, folder) -> list[
             raise RuntimeError(f"UID search failed: {data}")
         uids = sorted(int(u) for u in (data[0].split() if data[0] else []))
         messages = []
-        for uid in uids:
-            status, msg_data = conn.uid("fetch", str(uid), "(BODY.PEEK[])")
-            if status != "OK" or not msg_data or msg_data[0] is None or not isinstance(msg_data[0], tuple):
-                continue
-            raw = msg_data[0][1]
-            if not isinstance(raw, (bytes, bytearray)):
-                continue
-            messages.append(_parse_message(uid, email.message_from_bytes(raw)))
+        # Full bodies can be heavy, so batch in chunks rather than all at once,
+        # but never one-by-one: each FETCH is a full network round-trip.
+        chunk_size = 25
+        for i in range(0, len(uids), chunk_size):
+            for uid, _meta, raw in _fetch_many(conn, uids[i : i + chunk_size], "(BODY.PEEK[])"):
+                if not isinstance(raw, (bytes, bytearray)):
+                    continue
+                messages.append(_parse_message(uid, email.message_from_bytes(raw)))
+        messages.sort(key=lambda m: m["imap_uid"])  # oldest first
         return messages
     finally:
         try:

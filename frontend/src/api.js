@@ -75,8 +75,8 @@ export const api = {
   updateKnowledge: (id, data) => request(`/knowledge/${id}`, { method: 'PUT', body: data }),
   deleteKnowledge: (id) => request(`/knowledge/${id}`, { method: 'DELETE' }),
 
-  listInbox: (mailboxId, limit = 50) =>
-    request(`/mailboxes/${mailboxId}/inbox${qs({ limit })}`),
+  listInbox: (mailboxId, limit = 50, offset = 0) =>
+    request(`/mailboxes/${mailboxId}/inbox${qs({ limit, offset })}`),
   getInboxMessage: (mailboxId, uid) => request(`/mailboxes/${mailboxId}/inbox/${uid}`),
   setInboxFlags: (mailboxId, uids, seen) =>
     request(`/mailboxes/${mailboxId}/inbox/flags`, { method: 'POST', body: { uids, seen } }),

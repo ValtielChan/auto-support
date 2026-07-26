@@ -848,6 +848,8 @@ input[type='radio'] { accent-color: var(--pink-dark); }
 .inbox-list-scroll th:nth-child(3),
 .inbox-list-scroll td:nth-child(3) { width: 38%; }
 
+.inbox-loading-more { padding: 0.6rem 0.75rem; text-align: center; }
+
 .inbox-bulk {
   flex: none;
   display: flex;
