@@ -104,6 +104,56 @@ with TestClient(app) as client:  # context manager triggers lifespan (bootstrap 
     assert r.status_code == 204, r.text
     print("knowledge CRUD (playbook + fact): ok")
 
+    # export / import round-trip
+    r = client.get(f"/api/mailboxes/{mb['id']}/export", headers=headers)
+    assert r.status_code == 200, r.text
+    exp = r.json()
+    assert exp["kind"] == "autosupport-mailbox" and exp["version"] == 1, exp
+    assert "imap_password" not in exp["mailbox"], "secrets must be excluded by default"
+    assert "last_seen_uid" not in exp["mailbox"], "runtime state must not be exported"
+    assert "last_run_at" not in exp["agent"], "runtime state must not be exported"
+    print("export without secrets: ok")
+
+    r = client.get(
+        f"/api/mailboxes/{mb['id']}/export",
+        headers=headers,
+        params={"include_secrets": "true"},
+    )
+    assert r.status_code == 200, r.text
+    exp = r.json()
+    assert exp["mailbox"]["imap_password"] == "pw1", "decrypted IMAP password expected"
+    assert exp["mailbox"]["smtp_password"] == "pw2", "decrypted SMTP password expected"
+    assert exp["agent"]["enabled"] is True and exp["agent"]["product_context"] == "A CLI tool"
+    assert len(exp["knowledge_items"]) == 1 and len(exp["documents"]) == 1, exp
+    print("export with secrets: ok")
+
+    r = client.post("/api/mailboxes/import", headers=headers, json={**exp, "kind": "bogus"})
+    assert r.status_code == 422, "foreign JSON must be rejected: " + str(r.status_code)
+
+    r = client.post("/api/mailboxes/import", headers=headers, json=exp)
+    assert r.status_code == 201, r.text
+    imp = r.json()
+    assert imp["id"] != mb["id"] and imp["name"] == mb["name"]
+    assert "imap_password" not in imp and "imap_password_enc" not in imp
+    r = client.get(f"/api/mailboxes/{imp['id']}/agent", headers=headers)
+    assert r.status_code == 200, r.text
+    assert r.json()["enabled"] is False, "imported agents must start disabled"
+    assert r.json()["product_context"] == "A CLI tool", r.json()
+    r = client.get(f"/api/mailboxes/{imp['id']}/agent/knowledge", headers=headers)
+    assert r.status_code == 200 and len(r.json()) == 1, r.text
+    r = client.get(f"/api/mailboxes/{imp['id']}/agent/documents", headers=headers)
+    assert r.status_code == 200 and len(r.json()) == 1, r.text
+    # Re-export the imported mailbox: credentials must have survived the trip.
+    r = client.get(
+        f"/api/mailboxes/{imp['id']}/export",
+        headers=headers,
+        params={"include_secrets": "true"},
+    )
+    assert r.status_code == 200 and r.json()["mailbox"]["imap_password"] == "pw1", r.text
+    r = client.delete(f"/api/mailboxes/{imp['id']}", headers=headers)
+    assert r.status_code == 204, r.text
+    print("import round-trip (agent disabled, knowledge/documents/credentials kept): ok")
+
     r = client.get("/api/settings", headers=headers)
     assert r.status_code == 200, r.text
     print("settings:", r.json())

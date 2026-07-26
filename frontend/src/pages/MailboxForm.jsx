@@ -28,6 +28,7 @@ export default function MailboxForm() {
   const [error, setError] = useState('')
   const [test, setTest] = useState(null)
   const [busy, setBusy] = useState('')
+  const [withSecrets, setWithSecrets] = useState(false)
 
   useEffect(() => {
     if (isEdit) {
@@ -78,6 +79,25 @@ export default function MailboxForm() {
       }
     } catch (err) {
       setError(err.message)
+    } finally {
+      setBusy('')
+    }
+  }
+
+  const doExport = async () => {
+    setBusy('export')
+    setError('')
+    try {
+      const data = await api.exportMailbox(id, withSecrets)
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${(form.name || 'mailbox').toLowerCase().replace(/[^a-z0-9]+/g, '-')}-config.json`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) {
+      setError(e.message)
     } finally {
       setBusy('')
     }
@@ -172,6 +192,30 @@ export default function MailboxForm() {
           </button>
         </div>
       </form>
+
+      {isEdit && (
+        <div className="card">
+          <h2>Export configuration</h2>
+          <p className="muted">
+            Download everything configurable on this mailbox (connection settings, agent,
+            playbooks, facts, documents) as a JSON file. Import it later from the Home
+            page - on this server or another one.
+          </p>
+          <label className="checkbox">
+            <input
+              type="checkbox"
+              checked={withSecrets}
+              onChange={(e) => setWithSecrets(e.target.checked)}
+            />{' '}
+            Include passwords (written in clear text in the file - keep it safe)
+          </label>
+          <div className="actions">
+            <button type="button" className="btn" onClick={doExport} disabled={busy !== ''}>
+              <i className="fa-solid fa-file-export" /> {busy === 'export' ? 'Exporting…' : 'Export'}
+            </button>
+          </div>
+        </div>
+      )}
     </>
   )
 }

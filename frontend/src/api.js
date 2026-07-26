@@ -55,6 +55,9 @@ export const api = {
   testMailboxPayload: (data) => request('/mailboxes/test', { method: 'POST', body: data }),
   testMailbox: (id) => request(`/mailboxes/${id}/test`, { method: 'POST' }),
   runMailbox: (id) => request(`/mailboxes/${id}/run`, { method: 'POST' }),
+  exportMailbox: (id, includeSecrets) =>
+    request(`/mailboxes/${id}/export${qs({ include_secrets: includeSecrets ? 'true' : 'false' })}`),
+  importMailbox: (data) => request('/mailboxes/import', { method: 'POST', body: data }),
 
   getAgent: (mailboxId) => request(`/mailboxes/${mailboxId}/agent`),
   saveAgent: (mailboxId, data) =>

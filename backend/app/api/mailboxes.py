@@ -1,8 +1,19 @@
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ..models import Agent, Mailbox, User
-from ..schemas import ConnectionTestResult, MailboxCreate, MailboxOut, MailboxUpdate
+from ..models import Agent, Document, KnowledgeItem, Mailbox, User, utcnow
+from ..schemas import (
+    EXPORT_KIND,
+    EXPORT_VERSION,
+    AgentIn,
+    ConnectionTestResult,
+    MailboxBase,
+    MailboxCreate,
+    MailboxExport,
+    MailboxExportConfig,
+    MailboxOut,
+    MailboxUpdate,
+)
 from ..services import crypto, imap_client, smtp_client
 from ..services.agent_runner import run_mailbox_standalone
 from .deps import get_current_user, get_db
@@ -127,6 +138,73 @@ def test_saved_mailbox(mailbox_id: int, db: Session = Depends(get_db)):
             password=crypto.decrypt(mailbox.smtp_password_enc),
         ),
     )
+
+
+@router.get(
+    "/{mailbox_id}/export",
+    response_model=MailboxExport,
+    response_model_exclude_none=True,
+)
+def export_mailbox(
+    mailbox_id: int, include_secrets: bool = False, db: Session = Depends(get_db)
+):
+    """Portable config snapshot (mailbox + agent + knowledge + documents).
+
+    Passwords are included in plaintext only with include_secrets=true - the
+    encrypted values would be undecryptable on a server with another SECRET_KEY.
+    """
+    mailbox = _get_or_404(db, mailbox_id)
+    agent = mailbox.agent or Agent()
+    return MailboxExport(
+        exported_at=utcnow(),
+        mailbox=MailboxExportConfig(
+            **{name: getattr(mailbox, name) for name in MailboxBase.model_fields},
+            imap_password=crypto.decrypt(mailbox.imap_password_enc) if include_secrets else None,
+            smtp_password=crypto.decrypt(mailbox.smtp_password_enc) if include_secrets else None,
+        ),
+        agent=AgentIn(**{name: getattr(agent, name) for name in AgentIn.model_fields}),
+        knowledge_items=[
+            {"kind": item.kind, "title": item.title, "body": item.body}
+            for item in agent.knowledge_items
+        ],
+        documents=[{"title": doc.title, "content": doc.content} for doc in agent.documents],
+    )
+
+
+@router.post("/import", response_model=MailboxOut, status_code=201)
+def import_mailbox(payload: MailboxExport, db: Session = Depends(get_db)):
+    if payload.kind != EXPORT_KIND:
+        raise HTTPException(status_code=422, detail="Not an Auto Support mailbox export")
+    if payload.version != EXPORT_VERSION:
+        raise HTTPException(
+            status_code=422, detail=f"Unsupported export version: {payload.version}"
+        )
+    data = payload.mailbox.model_dump()
+    # Exports without secrets carry no passwords - store empty ones; the user
+    # re-enters them on the edit screen before the mailbox can actually run.
+    imap_password = data.pop("imap_password") or ""
+    smtp_password = data.pop("smtp_password") or ""
+    mailbox = Mailbox(
+        **data,
+        imap_password_enc=crypto.encrypt(imap_password),
+        smtp_password_enc=crypto.encrypt(smtp_password),
+    )
+    agent_data = payload.agent.model_dump()
+    # Imported agents always start disabled: never auto-send from a freshly
+    # imported config before the user has reviewed it.
+    agent_data["enabled"] = False
+    mailbox.agent = Agent(**agent_data)
+    mailbox.agent.knowledge_items = [
+        KnowledgeItem(kind=item.kind, title=item.title, body=item.body)
+        for item in payload.knowledge_items
+    ]
+    mailbox.agent.documents = [
+        Document(title=doc.title, content=doc.content) for doc in payload.documents
+    ]
+    db.add(mailbox)
+    db.commit()
+    db.refresh(mailbox)
+    return mailbox
 
 
 @router.post("/{mailbox_id}/run", status_code=202)

@@ -127,6 +127,35 @@ class KnowledgeItemOut(BaseModel):
     created_at: datetime
 
 
+# ---------------------------------------------------------------- mailbox export / import
+
+EXPORT_KIND = "autosupport-mailbox"
+EXPORT_VERSION = 1
+
+
+class MailboxExportConfig(MailboxBase):
+    # Plaintext credentials - present only when exported with include_secrets
+    # (encrypted values are useless elsewhere: the Fernet key derives from SECRET_KEY).
+    imap_password: str | None = None
+    smtp_password: str | None = None
+
+
+class MailboxExport(BaseModel):
+    """Portable snapshot of everything configurable on a mailbox.
+
+    Deliberately excludes runtime state (last_seen_uid, last_run_at, emails,
+    runs) - this is a config backup, not a data dump.
+    """
+
+    kind: str = EXPORT_KIND
+    version: int = EXPORT_VERSION
+    exported_at: datetime | None = None
+    mailbox: MailboxExportConfig
+    agent: AgentIn
+    knowledge_items: list[KnowledgeItemIn] = []
+    documents: list[DocumentIn] = []
+
+
 # ---------------------------------------------------------------- emails / replies
 
 class ReplyOut(BaseModel):
