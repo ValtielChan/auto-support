@@ -57,6 +57,25 @@ def _mark_read(mailbox: Mailbox, uids: list[int]) -> None:
         logger.exception("Could not mark %d message(s) read", len(uids))
 
 
+def _dispose_spam(mailbox: Mailbox, action: str, uids: list[int]) -> None:
+    """Junk or delete spam on the server (best-effort; never fails the run)."""
+    if not uids or action not in ("junk", "delete"):
+        return
+    fn = imap_client.move_to_junk if action == "junk" else imap_client.delete_messages
+    try:
+        fn(
+            host=mailbox.imap_host,
+            port=mailbox.imap_port,
+            use_ssl=mailbox.imap_ssl,
+            username=mailbox.imap_username,
+            password=crypto.decrypt(mailbox.imap_password_enc),
+            folder=mailbox.imap_folder,
+            uids=uids,
+        )
+    except Exception:
+        logger.exception("Could not %s %d spam message(s)", action, len(uids))
+
+
 def send_reply(db: Session, reply: Reply) -> None:
     """Send a stored reply (used both by auto-send and by manual approval)."""
     email = reply.email
@@ -101,7 +120,10 @@ def _fetch_into_db(db: Session, mailbox: Mailbox) -> list[Email]:
         if message_id in seen_ids:
             continue
         seen_ids.add(message_id)
-        skip = m["is_auto_reply"] or m["from_email"] == own_address
+        # Own mail is skipped outright. Bulk / auto-submitted mail is still classified
+        # (so spam can be junked) but never replied to - see _process_email.
+        skip = m["from_email"] == own_address
+        is_auto = bool(m["is_auto_reply"])
 
         existing = (
             db.query(Email)
@@ -112,6 +134,7 @@ def _fetch_into_db(db: Session, mailbox: Mailbox) -> list[Email]:
             # Still unread → re-queue for reprocessing. Drop stale unsent drafts so we
             # don't stack a second draft; sent replies stay as history.
             existing.imap_uid = m["imap_uid"]
+            existing.is_auto = is_auto
             for reply in list(existing.replies):
                 if reply.status == "draft":
                     db.delete(reply)
@@ -120,7 +143,7 @@ def _fetch_into_db(db: Session, mailbox: Mailbox) -> list[Email]:
             if skip:
                 existing.status = "ignored"
                 existing.category = "other"
-                existing.category_reason = "Auto-generated message or sent by this mailbox itself"
+                existing.category_reason = "Sent by this mailbox itself"
                 existing.processed_at = _utcnow()
             else:
                 existing.status = "new"
@@ -139,9 +162,10 @@ def _fetch_into_db(db: Session, mailbox: Mailbox) -> list[Email]:
             subject=m["subject"],
             body_text=m["body_text"],
             received_at=m["received_at"],
+            is_auto=is_auto,
             status="ignored" if skip else "new",
             category="other" if skip else None,
-            category_reason="Auto-generated message or sent by this mailbox itself"
+            category_reason="Sent by this mailbox itself"
             if skip
             else None,
             processed_at=_utcnow() if skip else None,
@@ -181,6 +205,11 @@ def _process_email(db: Session, mailbox: Mailbox, agent: Agent, client, model: s
     if email.category == "spam":
         email.status = "ignored"
         email.action_reason = "Classified as spam - the agent never engages spam."
+        return
+
+    if email.is_auto:
+        email.status = "ignored"
+        email.action_reason = "Auto-generated message - never replied to."
         return
 
     allow_escalation = bool(agent.escalation_enabled and agent.escalation_email)
@@ -281,6 +310,9 @@ def run_mailbox(db: Session, mailbox_id: int, trigger: str = "scheduled") -> Run
         # get retried. This is what makes the unread flag the source of truth.
         handled_uids = [e.imap_uid for e in touched.values() if e.status not in ("new", "error")]
         _mark_read(mailbox, handled_uids)
+        spam_uids = [e.imap_uid for e in touched.values()
+                     if e.category == "spam" and e.status == "ignored"]
+        _dispose_spam(mailbox, agent.spam_action, spam_uids)
         run.status = "success"
     except Exception as exc:
         logger.exception("Run failed for mailbox %s", mailbox_id)

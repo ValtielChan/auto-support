@@ -31,6 +31,7 @@ AGENT_FIELDS = (
     "escalation_email",
     "escalation_criteria",
     "notify_customer_on_escalation",
+    "spam_action",
 )
 
 TOOLS = [
@@ -68,6 +69,7 @@ TOOLS = [
                     "escalation_email": {"type": "string"},
                     "escalation_criteria": {"type": "string"},
                     "notify_customer_on_escalation": {"type": "boolean"},
+                    "spam_action": {"type": "string", "enum": ["none", "junk", "delete"]},
                 },
             },
         },

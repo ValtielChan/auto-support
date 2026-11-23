@@ -87,6 +87,10 @@ class Agent(Base):
     interval_minutes: Mapped[int] = mapped_column(Integer, default=60)
     # False = replies land in the approval queue; True = sent immediately.
     auto_send: Mapped[bool] = mapped_column(Boolean, default=False)
+    # What to do on the server with mail classified as spam: "none" (leave it, marked
+    # read), "junk" (move to the Junk folder - also trains servers that learn from
+    # Junk moves, e.g. mailcow) or "delete" (permanently remove it).
+    spam_action: Mapped[str] = mapped_column(String(20), default="none")
 
     model: Mapped[str | None] = mapped_column(String(120), default=None)
     language: Mapped[str | None] = mapped_column(String(80), default=None)
@@ -177,6 +181,8 @@ class Email(Base):
     # (the reply/escalate/ignore decision - distinct from category_reason above).
     processed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     action_reason: Mapped[str | None] = mapped_column(Text, default=None)
+    # Bulk / auto-submitted mail: classified (so spam can be junked) but never replied to.
+    is_auto: Mapped[bool] = mapped_column(Boolean, default=False)
 
     mailbox: Mapped[Mailbox] = relationship(back_populates="emails")
     replies: Mapped[list["Reply"]] = relationship(

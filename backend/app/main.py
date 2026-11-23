@@ -38,6 +38,8 @@ def _migrate() -> None:
         "ALTER TABLE run_logs ADD COLUMN report TEXT",
         "ALTER TABLE emails ADD COLUMN processed_at TIMESTAMPTZ",
         "ALTER TABLE emails ADD COLUMN action_reason TEXT",
+        "ALTER TABLE emails ADD COLUMN is_auto BOOLEAN NOT NULL DEFAULT FALSE",
+        "ALTER TABLE agents ADD COLUMN spam_action VARCHAR(20) NOT NULL DEFAULT 'none'",
     ]
     for stmt in statements:
         try:

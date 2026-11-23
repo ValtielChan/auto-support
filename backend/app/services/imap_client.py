@@ -145,6 +145,11 @@ def _parse_message(uid: int, msg: Message) -> dict:
         except Exception:
             received_at = None
     from_name, from_addr = parseaddr(_decode_str(msg.get("From")))
+    # Reply-To is who an answer goes to - e.g. a website contact form sends from the
+    # support address itself with the visitor in Reply-To. Treat that as the sender.
+    reply_name, reply_addr = parseaddr(_decode_str(msg.get("Reply-To")))
+    if reply_addr and "@" in reply_addr:
+        from_name, from_addr = reply_name, reply_addr
     return {
         "imap_uid": uid,
         "message_id": (msg.get("Message-ID") or f"<no-message-id-uid-{uid}>").strip(),
@@ -349,6 +354,51 @@ def fetch_new_messages(host, port, use_ssl, username, password, folder) -> list[
                 messages.append(_parse_message(uid, email.message_from_bytes(raw)))
         messages.sort(key=lambda m: m["imap_uid"])  # oldest first
         return messages
+    finally:
+        try:
+            conn.logout()
+        except Exception:
+            pass
+
+
+def _junk_folder(conn) -> str:
+    """The folder flagged \\Junk (RFC 6154), else a conventionally named one."""
+    status, data = conn.list()
+    names = []
+    for line in data or []:
+        line = line.decode(errors="replace") if isinstance(line, bytes) else str(line)
+        name = line.rsplit(' "/" ', 1)[-1].strip().strip('"') if ' "/" ' in line else line.split()[-1].strip('"')
+        if "\\junk" in line.lower():
+            return name
+        names.append(name)
+    for candidate in ("Junk", "Spam", "INBOX.Junk", "INBOX.Spam", "Junk E-mail"):
+        if candidate in names:
+            return candidate
+    raise RuntimeError("No Junk folder found on the server")
+
+
+def move_to_junk(host, port, use_ssl, username, password, folder, uids) -> None:
+    """Move messages from `folder` to the Junk folder (UID MOVE, COPY+expunge fallback)."""
+    uid_set = _uid_set(uids)
+    if not uid_set:
+        return
+    conn = _connect(host, port, use_ssl, username, password)
+    try:
+        junk = _junk_folder(conn)
+        status, data = conn.select(folder)  # read-write
+        if status != "OK":
+            raise RuntimeError(f"Cannot open folder {folder!r}: {data}")
+        quoted = '"' + junk.replace('"', '\\"') + '"'
+        try:  # imaplib only knows MOVE on recent Pythons; old ones raise here
+            status, data = conn.uid("move", uid_set, quoted)
+        except imaplib.IMAP4.error:
+            status = "NO"
+        if status != "OK":
+            status, data = conn.uid("copy", uid_set, quoted)
+            if status != "OK":
+                raise RuntimeError(f"Could not copy {uid_set} to {junk!r}: {data}")
+            conn.uid("store", uid_set, "+FLAGS", "(\\Deleted)")
+            conn.expunge()
     finally:
         try:
             conn.logout()

@@ -94,6 +94,13 @@ export default function AgentTab({ mailboxId }) {
           <input type="checkbox" checked={agent.auto_send} onChange={set('auto_send')} />{' '}
           <strong>Auto-send replies</strong> - if unchecked, replies wait in the approval queue
         </label>
+        <Field label="Spam handling" hint="What happens on the mail server to mail classified as spam">
+          <select value={agent.spam_action || 'none'} onChange={set('spam_action')}>
+            <option value="none">Leave in inbox (marked read)</option>
+            <option value="junk">Move to Junk folder</option>
+            <option value="delete">Delete permanently</option>
+          </select>
+        </Field>
         <p className="muted">Last run: {fmtDate(agent.last_run_at)}</p>
       </div>
 

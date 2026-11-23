@@ -1,4 +1,5 @@
 import json
+from typing import Literal
 from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -65,6 +66,7 @@ class AgentIn(BaseModel):
     enabled: bool = False
     interval_minutes: int = Field(default=60, ge=1)
     auto_send: bool = False
+    spam_action: Literal["none", "junk", "delete"] = "none"
     model: str | None = None
     language: str | None = None
     product_context: str = ""
