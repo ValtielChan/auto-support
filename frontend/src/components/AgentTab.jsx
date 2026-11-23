@@ -121,7 +121,7 @@ export default function AgentTab({ mailboxId }) {
           What to <em>do</em> for each type of email belongs in the Knowledge tab's playbooks.
         </p>
         <textarea rows={6} value={agent.guidelines} onChange={set('guidelines')} />
-        <Field label="Signature" hint="Appended to every reply exactly as written">
+        <Field label="Signature" hint="Appended to every reply, translated into the reply's language">
           <textarea rows={3} value={agent.signature} onChange={set('signature')} />
         </Field>
       </div>

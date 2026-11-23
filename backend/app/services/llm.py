@@ -169,7 +169,8 @@ def draft_reply(
     else:
         parts.append("\nWrite in the same language as the customer's email.")
     if agent.signature:
-        parts.append("\nEnd with this exact signature:\n" + agent.signature)
+        parts.append("\nEnd with this signature, translated into the language of the reply "
+                     "(keep names, brands and links unchanged):\n" + agent.signature)
     parts.append(
         "\nWrite ONLY the reply body as plain text (no subject line, no markdown, no "
         "JSON, no preamble). Do not invent facts, prices or features not in the context."
@@ -256,7 +257,8 @@ def generate_reply(
     else:
         parts.append('Escalation is disabled: never use "escalate".')
     if agent.signature:
-        parts.append("\nEnd every reply with this exact signature:\n" + agent.signature)
+        parts.append("\nEnd every reply with this signature, translated into the language of "
+                     "the reply (keep names, brands and links unchanged):\n" + agent.signature)
     parts.append(
         "\n## Output format\n"
         "Respond with a JSON object:\n"
