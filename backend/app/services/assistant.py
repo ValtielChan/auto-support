@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 
 from urllib.parse import parse_qs, unquote, urlsplit
 
+from openai import BadRequestError
 from sqlalchemy.orm import Session
 
 from ..models import Agent, Document, Email, KnowledgeItem, Mailbox
@@ -665,10 +666,22 @@ def chat(db: Session, mailbox: Mailbox, messages: list[dict]) -> dict:
     actions: list[str] = []
     changed = False
 
+    extra: dict = {}
     for _ in range(MAX_ROUNDS):
-        resp = client.chat.completions.create(
-            model=model, messages=convo, tools=TOOLS
-        )
+        try:
+            resp = client.chat.completions.create(
+                model=model, messages=convo, tools=TOOLS, **extra
+            )
+        except BadRequestError as exc:
+            # Some reasoning models (gpt-5.6-*) refuse tools + reasoning on Chat
+            # Completions; the API's own fix is reasoning_effort='none'. Only sent
+            # after that refusal so other models/compatible endpoints never see it.
+            if extra or "reasoning_effort" not in str(exc):
+                raise
+            extra = {"reasoning_effort": "none"}
+            resp = client.chat.completions.create(
+                model=model, messages=convo, tools=TOOLS, **extra
+            )
         msg = resp.choices[0].message
         if not msg.tool_calls:
             return {"reply": msg.content or "", "actions": actions, "changed": changed}
