@@ -710,6 +710,20 @@ input[type='radio'] { accent-color: var(--pink-dark); }
 }
 
 .msg-error { background: var(--pink); }
+
+/* Markdown inside a copilot bubble */
+.msg-md { white-space: normal; }
+.msg-md > :first-child { margin-top: 0; }
+.msg-md > :last-child { margin-bottom: 0; }
+.msg-md p, .msg-md ul, .msg-md ol, .msg-md pre, .msg-md table { margin: 0.45rem 0; }
+.msg-md ul, .msg-md ol { padding-left: 1.2rem; }
+.msg-md li + li { margin-top: 0.2rem; }
+.msg-md h1, .msg-md h2, .msg-md h3, .msg-md h4 { font-size: 0.95rem; margin: 0.7rem 0 0.35rem; }
+.msg-md a { color: var(--black); font-weight: 700; text-decoration-color: var(--pink); }
+.msg-md pre { overflow-x: auto; padding: 0.5rem; border: var(--border); background: var(--bg); }
+.msg-md pre code { padding: 0; border: 0; background: none; }
+.msg-md table { font-size: 0.82rem; }
+.msg-md th, .msg-md td { padding: 0.3rem 0.45rem; }
 .msg-typing { color: var(--muted); font-style: italic; }
 
 .msg-actions {

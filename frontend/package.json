@@ -10,11 +10,13 @@
   },
   "dependencies": {
     "@fontsource/archivo-black": "^5.0.0",
-    "@fortawesome/fontawesome-free": "^6.6.0",
     "@fontsource/space-grotesk": "^5.0.0",
+    "@fortawesome/fontawesome-free": "^6.6.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-router-dom": "^6.26.0"
+    "react-markdown": "^9.1.0",
+    "react-router-dom": "^6.26.0",
+    "remark-gfm": "^4.0.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.1",

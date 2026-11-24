@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Alert, Badge, Field, Spinner } from '../components/ui.jsx'
+import { Markdown } from '../components/AssistantPanel.jsx'
 
 const COLORS = [
   ['Green - primary', '--green', '#2EE88A'],
@@ -308,6 +309,11 @@ export default function DesignSystem() {
                 <div className="msg-actions">
                   <span className="badge badge-success">✓ Agent configuration updated</span>
                 </div>
+              </div>
+              <div className="msg msg-assistant">
+                <Markdown>
+                  {'Markdown replies render:\n\n- **bold**, `code`, [link](https://example.com)\n- lists & tables\n\n| Sender | Action |\n| --- | --- |\n| news@shop.com | unsubscribed |'}
+                </Markdown>
               </div>
               <div className="msg msg-assistant msg-error">⚠ Error message bubble.</div>
               <div className="msg msg-assistant msg-typing">Working…</div>

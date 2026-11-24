@@ -1,5 +1,21 @@
 import { useEffect, useRef, useState } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 import { api } from '../api.js'
+
+// Raw HTML is never rendered (react-markdown default): replies can echo email content.
+export function Markdown({ children }) {
+  return (
+    <div className="msg-md">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{ a: (props) => <a {...props} target="_blank" rel="noreferrer" /> }}
+      >
+        {children}
+      </ReactMarkdown>
+    </div>
+  )
+}
 
 const WELCOME =
   "Hi! I'm this mailbox's configuration copilot. Describe your product, ask me to " +
@@ -70,7 +86,7 @@ export default function AssistantPanel({ mailboxId, onChanged }) {
         <div className="msg msg-assistant">{WELCOME}</div>
         {messages.map((m, i) => (
           <div key={i} className={`msg msg-${m.role} ${m.error ? 'msg-error' : ''}`}>
-            {m.content}
+            {m.role === 'assistant' && !m.error ? <Markdown>{m.content}</Markdown> : m.content}
             {m.actions?.length > 0 && (
               <div className="msg-actions">
                 {m.actions.map((a, j) => (
