@@ -7,7 +7,11 @@ user can edit by hand, nothing more (credentials are out of reach).
 """
 
 import json
+import re
+import urllib.request
 from datetime import datetime, timezone
+
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from sqlalchemy.orm import Session
 
@@ -239,7 +243,10 @@ TOOLS = [
             ),
             "parameters": {
                 "type": "object",
-                "properties": {"limit": {"type": "integer", "minimum": 1, "maximum": 100}},
+                "properties": {
+                    "limit": {"type": "integer", "minimum": 1, "maximum": 100},
+                    "folder": {"type": "string", "enum": ["inbox", "junk"], "description": "inbox (default) or junk = the spam folder"},
+                },
             },
         },
     },
@@ -247,10 +254,13 @@ TOOLS = [
         "type": "function",
         "function": {
             "name": "read_inbox_message",
-            "description": "Read one live message in full by its IMAP uid (does not mark it read).",
+            "description": (
+                "Read one live message in full by its IMAP uid (does not mark it read). "
+                "Includes its List-Unsubscribe header when present."
+            ),
             "parameters": {
                 "type": "object",
-                "properties": {"uid": {"type": "integer"}},
+                "properties": {"uid": {"type": "integer"}, "folder": {"type": "string", "enum": ["inbox", "junk"], "description": "inbox (default) or junk = the spam folder"}},
                 "required": ["uid"],
             },
         },
@@ -265,6 +275,7 @@ TOOLS = [
                 "properties": {
                     "uids": {"type": "array", "items": {"type": "integer"}},
                     "seen": {"type": "boolean"},
+                    "folder": {"type": "string", "enum": ["inbox", "junk"], "description": "inbox (default) or junk = the spam folder"},
                 },
                 "required": ["uids", "seen"],
             },
@@ -277,7 +288,7 @@ TOOLS = [
             "description": "Send a reply to a live message by uid (SMTP, threaded). Only do this when the user asks.",
             "parameters": {
                 "type": "object",
-                "properties": {"uid": {"type": "integer"}, "body": {"type": "string"}},
+                "properties": {"uid": {"type": "integer"}, "body": {"type": "string"}, "folder": {"type": "string", "enum": ["inbox", "junk"], "description": "inbox (default) or junk = the spam folder"}},
                 "required": ["uid", "body"],
             },
         },
@@ -289,8 +300,24 @@ TOOLS = [
             "description": "Permanently delete one or more live messages by uid. Destructive - confirm with the user first.",
             "parameters": {
                 "type": "object",
-                "properties": {"uids": {"type": "array", "items": {"type": "integer"}}},
+                "properties": {"uids": {"type": "array", "items": {"type": "integer"}}, "folder": {"type": "string", "enum": ["inbox", "junk"], "description": "inbox (default) or junk = the spam folder"}},
                 "required": ["uids"],
+            },
+        },
+    },
+    {
+        "type": "function",
+        "function": {
+            "name": "unsubscribe",
+            "description": (
+                "Unsubscribe the mailbox from a newsletter/mailing list, using the message's "
+                "List-Unsubscribe header (one-click HTTPS POST, or an email to the mailto: "
+                "address). If neither works, returns the link for the user to open."
+            ),
+            "parameters": {
+                "type": "object",
+                "properties": {"uid": {"type": "integer"}, "folder": {"type": "string", "enum": ["inbox", "junk"], "description": "inbox (default) or junk = the spam folder"}},
+                "required": ["uid"],
             },
         },
     },
@@ -315,6 +342,7 @@ ACTION_LABELS = {
     "set_inbox_read": "Mailbox flags updated",
     "reply_inbox_message": "Reply sent",
     "delete_inbox_messages": "Messages deleted",
+    "unsubscribe": "Unsubscribed from a mailing list",
     "update_mailbox": "Mailbox updated",
 }
 
@@ -356,8 +384,11 @@ def _system_prompt(db: Session, mailbox: Mailbox) -> str:
         "- documents: long-form reference material (FAQ, guides).\n\n"
         "You can also browse and act on the LIVE mailbox over IMAP (list_inbox, "
         "read_inbox_message), and - only when the user explicitly asks - mark "
-        "messages read/unread, send replies, or delete messages. Always confirm "
-        "before deleting.\n\n"
+        "messages read/unread, send replies, delete messages, or unsubscribe from "
+        "newsletters. Every inbox tool takes folder='junk' to work on the spam "
+        "folder. Always confirm before deleting.\n"
+        "Your tools are fully available and working: never claim you cannot call "
+        "tools - if something is truly impossible, say which capability is missing.\n\n"
         "Guidance:\n"
         "- When the user roughly describes their product, write a COMPLETE, "
         "well-structured product context - expand and structure rather than copying "
@@ -497,6 +528,7 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
         "set_inbox_read",
         "reply_inbox_message",
         "delete_inbox_messages",
+        "unsubscribe",
     ):
         imap_args = dict(
             host=mailbox.imap_host,
@@ -506,6 +538,10 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
             password=crypto.decrypt(mailbox.imap_password_enc),
             folder=mailbox.imap_folder,
         )
+        if args.get("folder") == "junk":
+            imap_args["folder"] = imap_client.find_junk_folder(
+                **{k: v for k, v in imap_args.items() if k != "folder"}
+            )
         if name == "list_inbox":
             msgs = imap_client.list_mailbox(**imap_args, limit=min(int(args.get("limit", 30)), 100))["items"]
             verdicts = {
@@ -534,6 +570,7 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
                 "subject": m["subject"],
                 "seen": m.get("seen"),
                 "body": (m.get("body_text") or "")[:6000],
+                "list_unsubscribe": m.get("list_unsubscribe") or None,
             }
         if name == "set_inbox_read":
             imap_client.set_seen(**imap_args, uids=args["uids"], seen=bool(args["seen"]))
@@ -541,6 +578,8 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
         if name == "delete_inbox_messages":
             imap_client.delete_messages(**imap_args, uids=args["uids"])
             return {"ok": True, "deleted": args["uids"]}
+        if name == "unsubscribe":
+            return _unsubscribe(mailbox, imap_client.fetch_message(**imap_args, uid=int(args["uid"])))
         # reply_inbox_message
         original = imap_client.fetch_message(**imap_args, uid=int(args["uid"]))
         subject = original["subject"]
@@ -576,6 +615,46 @@ def _execute(db: Session, mailbox: Mailbox, name: str, args: dict):
         return {"provider": get_provider(provider_id).label, **result}
 
     return {"error": f"Unknown tool {name}"}
+
+
+def _unsubscribe(mailbox: Mailbox, m: dict) -> dict:
+    links = re.findall(r"<([^>]+)>", m.get("list_unsubscribe") or "")
+    https = [u for u in links if u.lower().startswith("https://")]
+    mailto = [u for u in links if u.lower().startswith("mailto:")]
+    errors = []
+    # RFC 8058 one-click: a POST with exactly this body.
+    if https and m.get("one_click_unsubscribe"):
+        try:
+            req = urllib.request.Request(
+                https[0],
+                data=b"List-Unsubscribe=One-Click",
+                method="POST",
+                headers={"Content-Type": "application/x-www-form-urlencoded"},
+            )
+            with urllib.request.urlopen(req, timeout=15) as r:
+                return {"ok": True, "method": "one-click", "status": r.status}
+        except Exception as exc:
+            errors.append(f"one-click failed: {exc}")
+    if mailto:
+        parts = urlsplit(mailto[0])
+        q = parse_qs(parts.query)
+        smtp_client.send_email(
+            host=mailbox.smtp_host,
+            port=mailbox.smtp_port,
+            use_tls=mailbox.smtp_tls,
+            username=mailbox.smtp_username,
+            password=crypto.decrypt(mailbox.smtp_password_enc),
+            from_name=mailbox.name,
+            from_addr=mailbox.email_address,
+            to_addr=unquote(parts.path),
+            subject=q.get("subject", ["unsubscribe"])[0],
+            body=q.get("body", ["unsubscribe"])[0],
+        )
+        return {"ok": True, "method": "mailto", "to": unquote(parts.path)}
+    if https:
+        # A plain link usually lands on a confirmation page - the user must open it.
+        return {"ok": False, "manual_link": https[0], "errors": errors}
+    return {"ok": False, "error": "No List-Unsubscribe header; look for a link in the body.", "errors": errors}
 
 
 def chat(db: Session, mailbox: Mailbox, messages: list[dict]) -> dict:

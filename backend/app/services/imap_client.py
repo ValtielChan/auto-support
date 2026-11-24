@@ -275,6 +275,8 @@ def fetch_message(host, port, use_ssl, username, password, folder, uid: int) -> 
         parsed["seen"] = seen
         # Only the live reader needs the (heavy) rendered HTML; not stored in the DB.
         parsed["body_html"] = sanitize_html(_extract_html(msg))
+        parsed["list_unsubscribe"] = _decode_str(msg.get("List-Unsubscribe"))
+        parsed["one_click_unsubscribe"] = bool(msg.get("List-Unsubscribe-Post"))
         return parsed
     finally:
         try:
@@ -375,6 +377,17 @@ def _junk_folder(conn) -> str:
         if candidate in names:
             return candidate
     raise RuntimeError("No Junk folder found on the server")
+
+
+def find_junk_folder(host, port, use_ssl, username, password) -> str:
+    conn = _connect(host, port, use_ssl, username, password)
+    try:
+        return _junk_folder(conn)
+    finally:
+        try:
+            conn.logout()
+        except Exception:
+            pass
 
 
 def move_to_junk(host, port, use_ssl, username, password, folder, uids) -> None:
